@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import useSWR, { mutate } from "swr"
 import { CheckCircle, XCircle, Search, User, CreditCard, Package, Camera } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -48,6 +49,39 @@ export function QRVerify({ shopId, isAdmin }: QRVerifyProps) {
     const handleScan = (decodedText: string) => {
         setCode(decodedText)
         handleVerify(decodedText)
+    }
+
+    const handleIssueRation = async () => {
+        if (!result) return
+        setLoading(true)
+        try {
+            const res = await fetch('/api/transactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    consumer_id: result.consumer.id,
+                    shop_id: result.shop_id,
+                    items: result.items,
+                    total_amount: 0 // In this system, price might be handled differently or be 0 for some items
+                }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                toast.success("Ration issued and stock updated!")
+                setResult(null)
+                setCode("")
+                // If mutations are needed for dashboards, they should be triggered here,
+                // but since this is a sub-component, we rely on the parent or global mutate.
+                mutate(key => typeof key === 'string' && key.startsWith('/api/stock'))
+                mutate(key => typeof key === 'string' && key.startsWith('/api/transactions'))
+            } else {
+                toast.error(data.error || "Failed to issue ration")
+            }
+        } catch {
+            toast.error("An error occurred while issuing ration")
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -139,8 +173,12 @@ export function QRVerify({ shopId, isAdmin }: QRVerifyProps) {
                             </div>
                         </div>
 
-                        <Button className="w-full bg-india-green hover:bg-india-green/90 text-primary-foreground gap-2">
-                            <CheckCircle className="h-4 w-4" /> Issue Ration Items
+                        <Button
+                            onClick={handleIssueRation}
+                            disabled={loading}
+                            className="w-full bg-india-green hover:bg-india-green/90 text-primary-foreground gap-2"
+                        >
+                            <CheckCircle className="h-4 w-4" /> {loading ? "Issuing..." : "Issue Ration Items"}
                         </Button>
                     </CardContent>
                 </Card>

@@ -66,12 +66,14 @@ export async function POST(req: NextRequest) {
             message: 'QR Verified. Issue Ration.',
             details: {
                 consumer: {
+                    id: booking.consumer_id,
                     name: consumer.name,
                     card_no: consumer.ration_card_number,
                     type: consumer.card_type
                 },
                 items: items,
-                timing: timing
+                timing: timing,
+                shop_id: booking.shop_id
             }
         })
     } catch (e: any) {
